@@ -1,0 +1,441 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Portal</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #071629, #123e65);
+      color: white;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 380px;
+      padding: 30px;
+      background: #10263b;
+      border: 1px solid #31506a;
+      border-radius: 16px;
+      box-shadow: 0 15px 40px #0005;
+    }
+
+    h2 {
+      text-align: center;
+      margin-top: 0;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #b8c9d8;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin: 15px 0 7px;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #48657c;
+      border-radius: 7px;
+      background: #071a2b;
+      color: white;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #49a7ff;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 7px;
+      background: #1976d2;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2588e8;
+    }
+
+    .secondary {
+      background: #294359;
+      margin-top: 10px;
+    }
+
+    #message {
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.5;
+      margin-top: 15px;
+      overflow-wrap: anywhere;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .note {
+      color: #aebfd0;
+      font-size: 11px;
+      text-align: center;
+      margin-top: 22px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <section id="loginSection">
+      <h2>LOGIN PORTAL</h2>
+      <p class="subtitle">Silakan masuk ke akun Anda</p>
+
+      <form id="loginForm">
+        <label for="loginEmail">Alamat Email</label>
+        <input
+          id="loginEmail"
+          type="email"
+          placeholder="nama@email.com"
+          autocomplete="email"
+          required
+        >
+
+        <label for="loginPassword">Password</label>
+        <input
+          id="loginPassword"
+          type="password"
+          placeholder="Masukkan password"
+          autocomplete="current-password"
+          required
+          minlength="8"
+        >
+
+        <button type="submit">Masuk</button>
+      </form>
+
+      <button class="secondary" id="showRegister">
+        Buat Akun Baru
+      </button>
+    </section>
+
+    <section id="registerSection" class="hidden">
+      <h2>REGISTRASI</h2>
+      <p class="subtitle">Buat akun demo baru</p>
+
+      <form id="registerForm">
+        <label for="registerName">Nama</label>
+        <input
+          id="registerName"
+          type="text"
+          placeholder="Nama Anda"
+          required
+          maxlength="80"
+        >
+
+        <label for="registerEmail">Alamat Email</label>
+        <input
+          id="registerEmail"
+          type="email"
+          placeholder="nama@email.com"
+          autocomplete="email"
+          required
+        >
+
+        <label for="registerPassword">Password</label>
+        <input
+          id="registerPassword"
+          type="password"
+          placeholder="Minimal 8 karakter"
+          autocomplete="new-password"
+          required
+          minlength="8"
+        >
+
+        <button type="submit">Daftar</button>
+      </form>
+
+      <button class="secondary" id="showLogin">
+        Kembali ke Login
+      </button>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <h2>LOGIN BERHASIL</h2>
+      <p class="subtitle">Selamat datang di portal Anda.</p>
+
+      <p>Nama: <strong id="profileName"></strong></p>
+      <p>Email: <strong id="profileEmail"></strong></p>
+      <p class="subtitle">
+        Data profil tersimpan di browser ini.
+      </p>
+
+      <button id="logoutButton">Keluar</button>
+    </section>
+
+    <p id="message" role="status" aria-live="polite"></p>
+
+    <p class="note">
+      DEMO PEMBELAJARAN — bukan sistem autentikasi produksi.
+      Data browser dapat dihapus atau diubah oleh pemilik perangkat.
+    </p>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const USERS_KEY = "portal_demo_users_v1";
+    const SESSION_KEY = "portal_demo_session_v1";
+
+    function getUsers() {
+      try {
+        const data = JSON.parse(
+          localStorage.getItem(USERS_KEY) || "[]"
+        );
+
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function showMessage(text, success = false) {
+      $("message").textContent = text;
+      $("message").style.color = success
+        ? "#72e6a1"
+        : "#ffaaaa";
+    }
+
+    function showSection(sectionId) {
+      ["loginSection", "registerSection", "dashboard"]
+        .forEach(id => $(id).classList.add("hidden"));
+
+      $(sectionId).classList.remove("hidden");
+      showMessage("");
+    }
+
+    async function hashPassword(password, salt) {
+      if (!window.crypto?.subtle) {
+        throw new Error(
+          "Fitur keamanan browser tidak tersedia. Jalankan melalui HTTPS atau localhost."
+        );
+      }
+
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        "PBKDF2",
+        false,
+        ["deriveBits"]
+      );
+
+      const bits = await crypto.subtle.deriveBits(
+        {
+          name: "PBKDF2",
+          salt: encoder.encode(salt),
+          iterations: 600000,
+          hash: "SHA-256"
+        },
+        key,
+        256
+      );
+
+      return Array.from(new Uint8Array(bits))
+        .map(byte => byte.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    function secureEqual(a, b) {
+      if (a.length !== b.length) return false;
+
+      let result = 0;
+
+      for (let i = 0; i < a.length; i++) {
+        result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+      }
+
+      return result === 0;
+    }
+
+    function randomSalt() {
+      const bytes = crypto.getRandomValues(
+        new Uint8Array(16)
+      );
+
+      return Array.from(bytes)
+        .map(byte => byte.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    function openDashboard(user) {
+      $("profileName").textContent = user.name;
+      $("profileEmail").textContent = user.email;
+      showSection("dashboard");
+    }
+
+    $("showRegister").addEventListener("click", () => {
+      showSection("registerSection");
+    });
+
+    $("showLogin").addEventListener("click", () => {
+      showSection("loginSection");
+    });
+
+    $("registerForm").addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+
+        const name = $("registerName").value.trim();
+        const email = $("registerEmail").value.trim()
+          .toLowerCase();
+        const password = $("registerPassword").value;
+
+        if (password.length < 8) {
+          return showMessage(
+            "Password minimal 8 karakter."
+          );
+        }
+
+        if (password.length > 256) {
+          return showMessage("Password terlalu panjang.");
+        }
+
+        try {
+          const users = getUsers();
+
+          if (users.some(user => user.email === email)) {
+            return showMessage(
+              "Email sudah terdaftar. Silakan login."
+            );
+          }
+
+          const salt = randomSalt();
+          const passwordHash = await hashPassword(
+            password,
+            salt
+          );
+
+          users.push({
+            id: crypto.randomUUID(),
+            name,
+            email,
+            salt,
+            passwordHash
+          });
+
+          localStorage.setItem(
+            USERS_KEY,
+            JSON.stringify(users)
+          );
+
+          $("registerForm").reset();
+          $("loginEmail").value = email;
+
+          showSection("loginSection");
+          showMessage(
+            "Akun demo berhasil dibuat. Silakan login.",
+            true
+          );
+        } catch (error) {
+          showMessage(error.message ||
+            "Pendaftaran gagal.");
+        }
+      }
+    );
+
+    $("loginForm").addEventListener(
+      "submit",
+      async (event) => {
+        event.preventDefault();
+
+        const email = $("loginEmail").value.trim()
+          .toLowerCase();
+        const password = $("loginPassword").value;
+
+        try {
+          const user = getUsers().find(
+            item => item.email === email
+          );
+
+          if (!user) {
+            return showMessage(
+              "Email atau password tidak sesuai."
+            );
+          }
+
+          const hash = await hashPassword(
+            password,
+            user.salt
+          );
+
+          if (!secureEqual(hash, user.passwordHash)) {
+            return showMessage(
+              "Email atau password tidak sesuai."
+            );
+          }
+
+          // Sesi hanya untuk demo lokal.
+          sessionStorage.setItem(
+            SESSION_KEY,
+            user.id
+          );
+
+          $("loginPassword").value = "";
+          openDashboard(user);
+        } catch (error) {
+          showMessage(error.message || "Login gagal.");
+        }
+      }
+    );
+
+    $("logoutButton").addEventListener("click", () => {
+      sessionStorage.removeItem(SESSION_KEY);
+      showSection("loginSection");
+      showMessage("Anda telah keluar.", true);
+    });
+
+    // Pulihkan sesi selama tab browser masih aktif.
+    try {
+      const sessionId = sessionStorage.getItem(
+        SESSION_KEY
+      );
+
+      const user = getUsers().find(
+        item => item.id === sessionId
+      );
+
+      if (user) {
+        openDashboard(user);
+      }
+    } catch {
+      showSection("loginSection");
+    }
+  </script>
+</body>
+</html>
